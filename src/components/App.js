@@ -2,10 +2,10 @@ import React, { Component } from 'react';
 import Web3 from 'web3';
 // import logo from '../logo.png';
 import './App.css';
-import Marketplace from '../abis/Marketplace.json';
 import Navbar from './Navbar';
 import Main from './Main';
-
+import contract from '@truffle/contract';
+import MarketPlaceArtifact from '../abis/Marketplace.json';
 
 class App extends Component {
 
@@ -15,19 +15,31 @@ class App extends Component {
     }
 
     async loadWeb3() {
+        // Modern dapp browsers...
         if (window.ethereum) {
-            window.web3 = new Web3(window.ethereum);
-            await window.ethereum.enable();
+            App.web3Provider = window.ethereum;
+            try {
+                // Request account access
+                await window.ethereum.enable();
+            } catch (error) {
+                // User denied account access...
+                console.error("User denied account access")
+            }
         }
+        // Legacy dapp browsers...
         else if (window.web3) {
-            window.web3 = new Web3(window.web3.currentProvider);
+            App.web3Provider = window.web3.currentProvider;
         }
+        // If no injected web3 instance is detected, fall back to Ganache
         else {
-            window.alert('Non-Ethereum browser detected. You should consider trying MetaMask!');
+            App.web3Provider = new Web3.providers.HttpProvider('http://localhost:8545');
         }
+        window.web3 = new Web3(App.web3Provider);
     }
 
     async loadBlockchainData() {
+        const Marketplace = contract(MarketPlaceArtifact);
+        Marketplace.setProvider(App.web3Provider);
         const web3 = window.web3;
         // Load account
         const accounts = await web3.eth.getAccounts();
@@ -39,7 +51,7 @@ class App extends Component {
         const networkData = Marketplace.networks[networkId];
         console.log(networkData);
         if (networkData) {
-            const marketplace = new web3.eth.Contract(Marketplace.abi, networkData.address);
+            const marketplace = await Marketplace.at(networkData.address);
             console.log(marketplace);
             this.setState({ marketplace });
             this.loadProducts();
@@ -65,23 +77,23 @@ class App extends Component {
     }
 
     async loadProducts() {
-        // this.setState({ loading: true });
-        // const productCount = await this.state.marketplace.methods.productCount().call();
-        // console.log(productCount);
-        // const products = [];
-        // for (let i = 1; i <= productCount; i++) {
-        //     const product = await this.state.marketplace.methods.products(i).call();
-        //     console.log(product);
-        //     products.push(product);
-        // }
-        // this.setState({ products });
-        // this.setState({ loading: false });
+        this.setState({ loading: true });
+        const productCount = await this.state.marketplace.productCount();
+        console.log(productCount);
+        const products = [];
+        for (let i = 1; i <= productCount; i++) {
+            const product = await this.state.marketplace.products(i);
+            console.log(product);
+            products.push(product);
+        }
+        this.setState({ products });
+        this.setState({ loading: false });
     }
 
     createProduct(name, price) {
         console.log("Creating product: " + name + ", price: " + price);
         this.setState({ loading: true });
-        this.state.marketplace.methods.createProduct(name, price).send({ from: this.state.account, value: price })
+        this.state.marketplace.createProduct(name, price, { from: this.state.account })
             .once('receipt', (receipt) => {
                 this.loadProducts();
             })
@@ -90,7 +102,7 @@ class App extends Component {
     purchaseProduct(id, price) {
         console.log("Puchasing: " + id + ", price: " + price);
         this.setState({ loading: true });
-        this.state.marketplace.methods.purchaseProduct(id).send({ from: this.state.account, value: price })
+        this.state.marketplace.purchaseProduct(id, { from: this.state.account, value: price })
             .once('receipt', (receipt) => {
                 this.loadProducts();
             })
@@ -106,7 +118,7 @@ class App extends Component {
                         <main role="main" className="col-lg-12 d-flex">
                             {this.state.loading
                                 ? <div id="loader" className="text-center"><p className="text-center">Loading...</p></div>
-                                : <Main createProduct={this.createProduct} purchaseProduct={this.purchaseProduct} products={this.state.products} />
+                                : <Main account={this.state.account} createProduct={this.createProduct} purchaseProduct={this.purchaseProduct} products={this.state.products} />
                             }
                         </main>
                     </div>

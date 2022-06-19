@@ -45,12 +45,12 @@ class Main extends Component {
                     </thead>
                     <tbody id="productList">
                         {this.props.products.map(product =>
-                            <tr key={product.id}>
-                                <th scope="row">{product.id}</th>
+                            <tr key={product.id.toString()}>
+                                <th scope="row">{product.id.toString()}</th>
                                 <td>{product.name}</td>
                                 <td>{window.web3.utils.fromWei(product.price, 'Ether')} ETH</td>
                                 <td>{product.owner}</td>
-                                {!product.purchased && <td><button className="buyButton"
+                                {!product.purchased && product.owner != this.props.account && <td><button className="buyButton"
                                     onClick={(event) => {
                                         event.preventDefault()
                                         this.props.purchaseProduct(window.web3.utils.toBN(product.id), window.web3.utils.toBN(product.price))

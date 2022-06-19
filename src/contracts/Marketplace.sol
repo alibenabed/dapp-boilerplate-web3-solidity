@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.15;
 
 contract Marketplace {
     string public name;
@@ -35,21 +35,21 @@ contract Marketplace {
     }
 
     function createProduct(string memory _name, uint256 _price) public {
-        // Require a valid name
+        /* Require a valid name */
         require(bytes(_name).length > 0);
-        // Require a valid price
+        /* Require a valid price */
         require(_price > 0);
-        // Increment product count
+        /* Increment product count */
         productCount ++;
-        // Create the product
-        products[productCount] = Product(productCount, _name, _price, payable(msg.sender), false;
-        // Trigger an event
+        /* Create the product */
+        products[productCount] = Product(productCount, _name, _price, payable(msg.sender), false);
+        /* Trigger an event */
         emit ProductCreated(productCount, _name, _price, payable(msg.sender), false);
     }
 
     function purchaseProduct(uint256 _id) public payable {
         // Fetch the product
-        Product memory _product = products[_id];
+        Product storage _product = products[_id];
         // Fetch the owner
         address payable _seller = _product.owner;
         // Make sure the product has a valid id
